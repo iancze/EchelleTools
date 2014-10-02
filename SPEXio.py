@@ -22,7 +22,8 @@ parser.add_argument("outfile", help="Output Filename to contain the processed fi
 
 parser.add_argument("--npy", action="store_true", help="Write out as many *.npy files.")
 parser.add_argument("--hdf", action="store_true", help="Write out as a single hdf5 file.")
-parser.add_argument("--clip", type=int, help="Truncate the data file after this wavelengeth (AA)")
+parser.add_argument("--clip", nargs=2, type=float, help="Truncate the data to this range in (AA). Use None for no "
+                                "limit on one side.")
 parser.add_argument("--air", action="store_true", help="Shift from vacuum to air wavelengths")
 
 parser.add_argument("--interpolate", action="store_true", help="Interpolate atmospheric chunks with a line, "
@@ -85,12 +86,19 @@ class SPEXProcessor:
         masks = (fl >= 0)
 
         if args.clip is not None:
-            #If segment, then just clip.
-            ind = np.sum(wl <= args.clip)
-            wl = wl[:ind]
-            fl = fl[:ind]
-            sigma = sigma[:ind]
-            masks = masks[:ind]
+            start, end = args.clip
+            print("Clipping from {} to {} AA".format(start, end))
+            if start and end:
+                ind = (wl >= start) & (wl <= end)
+            elif start:
+                ind = (wl >= start)
+            elif end:
+                ind = (wl <= end)
+            print(np.sum(ind))
+            wl = wl[ind]
+            fl = fl[ind]
+            sigma = sigma[ind]
+            masks = masks[ind]
 
 
         if args.interpolate:

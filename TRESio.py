@@ -75,7 +75,6 @@ class TRESProcessor:
             self.BCV = None
         hdulist.close()
 
-
     def wechelletxt(self, infile, outdir):
         for i in range(1, self.norders + 1): #Do this for all 51 orders
             inp = infile + "[*,{:d}]".format(i)
