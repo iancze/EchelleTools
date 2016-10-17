@@ -153,6 +153,7 @@ class TRESProcessor:
             np.save(self.out_fn + ".fls.npy",flsf)
             np.save(self.out_fn + ".sigmas.npy", sigma)
 
+
 def main():
     #Check to see if outfile exists. If --clobber, overwrite, otherwise exit.
     if os.path.exists(args.outfile):
