@@ -17,16 +17,14 @@ n_air = 1.000277
 c_ang_air = c_ang/n_air
 c_kms_air = c_kms/n_air
 
-def convert_spectrum(fraw, fblaze, fout, BCV=False):
+def convert_spectrum(fraw, fout, BCV=False):
     '''
     param fraw: the raw counts
-    param fblaze: the blaze-corrected spectrum
     param fout: the .json file to save to
 
     '''
 
     raw_list = read_fits.read_fits_spectrum1d(fraw)
-    blaze_list = read_fits.read_fits_spectrum1d(fblaze)
     head = fits.getheader(fraw)
     try:
         BCV = head["BCV"]
@@ -37,33 +35,35 @@ def convert_spectrum(fraw, fblaze, fout, BCV=False):
     BCV_cor = np.sqrt((c_kms_air + BCV) / (c_kms_air - BCV))
 
     echelle_dict = {}
-    npix = len(blaze_list[0].wavelength)
+    npix = len(raw_list[0].wavelength)
 
     # Do this for each order in the spectrum
-    for i,(raw,blaze) in enumerate(zip(raw_list, blaze_list)):
+    for i,raw in enumerate(raw_list):
 
         # Correct for the barycentric shift
-        wl = blaze.wavelength.value
+        wl = raw.wavelength.value
 
         # Scale the sigma values by the same blaze function that the raw fluxes were scaled by
-        raw_flux = raw.flux.value
-        raw_flux[raw_flux==0] = 1.0
+        # raw_flux = raw.flux.value
+        # raw_flux[raw_flux==0] = 1.0
         # Where the ratio values are 0, just set it to 1, since the noise will be 0 here too.
-        ratio = blaze.flux.value/raw_flux
-        sigma = ratio * np.sqrt(raw.flux.value)
+        # ratio = blaze.flux.value/raw_flux
+        # sigma = ratio * np.sqrt(raw.flux.value)
 
         if BCV:
             wl = wl * BCV_cor
 
         order_dict = {  "wl":wl,
-                        "fl":blaze.flux.value,
-                        "sigma":sigma,
+                        "fl":raw.flux.value,
                         "mask": np.ones((npix,), dtype="bool")}
 
         echelle_dict["order_{}".format(i)] = order_dict
 
     UT = head["DATE-OBS"]
     echelle_dict["UT"] = UT
+    echelle_dict["AIR"] = head["AIR"]
+    echelle_dict["EXPTIME"] = head["EXPTIME"]
+
     try:
         echelle_dict["HJD"] = head["HJDN"]
     except KeyError:
@@ -87,7 +87,6 @@ if __name__=="__main__":
 
     parser = argparse.ArgumentParser(description="Process TRES echelle spectra into an EchelleJSON file.")
     parser.add_argument("rawfile", help="The un-blaze-corrected, un-flux-calibrated FITS file.")
-    parser.add_argument("blazefile", help="The blaze-corrected, flux-calibrated FITS file.")
     parser.add_argument("outfile", help="Output Filename to contain the processed file. Should have no extension, *.hdf5 or *.npy added automatically.")
 
     parser.add_argument("-t", "--trim", type=int, default=6, help="How many pixels to trim from the front of the file. Default is 6")
@@ -97,4 +96,4 @@ if __name__=="__main__":
 
     args = parser.parse_args()
 
-    convert_spectrum(args.rawfile, args.blazefile, args.outfile, args.BCV)
+    convert_spectrum(args.rawfile, args.outfile, args.BCV)
